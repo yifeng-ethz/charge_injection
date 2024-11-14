@@ -1,6 +1,8 @@
- -- File name: charge_inj_pulser.vhd 
+-- File name: charge_inj_pulser.vhd 
 -- Author: Yifeng Wang (yifenwan@phys.ethz.ch)
 -- =======================================
+-- Version: 3.0 (Nov 8, 2024) (sync with run control; change setting: frequency -> pwm in cycles;
+--                             add avmm *read)
 -- Version: 2.0 (May 6, 2024) (replace PLL with counter)
 -- Version: 1.3 (using clkdiv old for trigger)
 -- Version: 1.2 (using sync pulser)
@@ -24,7 +26,6 @@ use ieee.numeric_std.all;
 use IEEE.math_real.log2;
 use IEEE.math_real.ceil;
 use ieee.math_real.floor;
-use ieee.std_logic_arith.conv_std_logic_vector;
 
 
 entity charge_inj_pulser is
