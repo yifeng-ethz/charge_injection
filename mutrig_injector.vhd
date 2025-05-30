@@ -3,6 +3,7 @@
 -- =======================================
 -- Version: 3.0 (Nov 8, 2024) (add system-level verification features; change setting: frequency -> pwm in cycles;
 --                             add avmm *read)
+-- Version: 3.1 (May 5, 2025) (use pwr-up default for csr registers)
 -- =======================================
 -- Date: Aug 10, 2023 (inher. from charge_inj_pulser which is deprecated)
 -- =========
@@ -44,8 +45,8 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
-use IEEE.math_real.log2;
-use IEEE.math_real.ceil;
+use ieee.math_real.log2;
+use ieee.math_real.ceil;
 use ieee.math_real.floor;
 
 
@@ -93,22 +94,32 @@ end entity;
 architecture rtl of mutrig_injector is 
 	
     -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ csr \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-    constant default_header_delay           : integer := 100;
-    constant default_header_interval        : integer := 1; 
-    constant default_injection_multiplicity : integer := 1;
-    constant default_header_ch              : integer := 0;
-    constant default_pulse_interval         : integer := 1000;
-    constant default_pulse_high_cycles      : integer := 5; 
+    constant DEFAULT_HEADER_DELAY           : integer := 100;
+    constant DEFAULT_HEADER_INTERVAL        : integer := 1; 
+    constant DEFAULT_INJECTION_MULTIPLICITY : integer := 1;
+    constant DEFAULT_HEADER_CH              : integer := 0;
+    constant DEFAULT_PULSE_INTERVAL         : integer := 1000;
+    constant DEFAULT_PULSE_HIGH_CYCLES      : integer := 5;
+    constant CSR_GENERAL_REG_BITS           : natural := 32; 
     type csr_t is record
         mode                    : std_logic_vector(3 downto 0);
-        header_delay            : std_logic_vector(31 downto 0);
-        header_interval         : std_logic_vector(31 downto 0);
-        injection_multiplicity  : std_logic_vector(31 downto 0);
+        header_delay            : std_logic_vector(CSR_GENERAL_REG_BITS-1 downto 0);
+        header_interval         : std_logic_vector(CSR_GENERAL_REG_BITS-1 downto 0);
+        injection_multiplicity  : std_logic_vector(CSR_GENERAL_REG_BITS-1 downto 0);
         header_ch               : std_logic_vector(HEADERINFO_CHANNEL_W-1 downto 0);
-        pulse_interval          : std_logic_vector(31 downto 0);
+        pulse_interval          : std_logic_vector(CSR_GENERAL_REG_BITS-1 downto 0);
         pulse_high_cycles       : std_logic_vector(7 downto 0);
     end record;
-    signal csr                  : csr_t;
+    constant CSR_DEF            : csr_t := (
+        mode                    => (others => '0'),
+        header_delay            => std_logic_vector(to_unsigned(DEFAULT_HEADER_DELAY,CSR_GENERAL_REG_BITS)),
+        header_interval         => std_logic_vector(to_unsigned(DEFAULT_HEADER_INTERVAL,CSR_GENERAL_REG_BITS)),
+        injection_multiplicity  => std_logic_vector(to_unsigned(DEFAULT_INJECTION_MULTIPLICITY,CSR_GENERAL_REG_BITS)),
+        header_ch               => std_logic_vector(to_unsigned(DEFAULT_HEADER_CH,HEADERINFO_CHANNEL_W)),
+        pulse_interval          => std_logic_vector(to_unsigned(DEFAULT_PULSE_INTERVAL,CSR_GENERAL_REG_BITS)),
+        pulse_high_cycles       => std_logic_vector(to_unsigned(DEFAULT_PULSE_HIGH_CYCLES,8))
+    );
+    signal csr                  : csr_t := CSR_DEF;
 	
 	
     
@@ -144,13 +155,14 @@ begin
     begin
         if (rising_edge(i_clk)) then 
             if (i_rst = '1') then 
-                csr.mode            <= (others => '0');
-                csr.header_delay    <= std_logic_vector(to_unsigned(default_header_delay,csr.header_delay'length));
-                csr.header_interval <= std_logic_vector(to_unsigned(default_header_interval,csr.header_interval'length));
-                csr.injection_multiplicity  <= std_logic_vector(to_unsigned(default_injection_multiplicity,csr.injection_multiplicity'length));
-                csr.header_ch       <= std_logic_vector(to_unsigned(default_header_ch,csr.header_ch'length));
-                csr.pulse_interval  <= std_logic_vector(to_unsigned(default_pulse_interval,csr.pulse_interval'length));
-                csr.pulse_high_cycles   <= std_logic_vector(to_unsigned(default_pulse_high_cycles,csr.pulse_high_cycles'length));
+                csr                 <= CSR_DEF;
+--                csr.mode            <= (others => '0');
+--                csr.header_delay    <= std_logic_vector(to_unsigned(DEFAULT_HEADER_DELAY,csr.header_delay'length));
+--                csr.header_interval <= std_logic_vector(to_unsigned(DEFAULT_HEADER_INTERVAL,csr.header_interval'length));
+--                csr.injection_multiplicity  <= std_logic_vector(to_unsigned(DEFAULT_INJECTION_MULTIPLICITY,csr.injection_multiplicity'length));
+--                csr.header_ch       <= std_logic_vector(to_unsigned(DEFAULT_HEADER_CH,csr.header_ch'length));
+--                csr.pulse_interval  <= std_logic_vector(to_unsigned(DEFAULT_PULSE_INTERVAL,csr.pulse_interval'length));
+--                csr.pulse_high_cycles   <= std_logic_vector(to_unsigned(DEFAULT_PULSE_HIGH_CYCLES,csr.pulse_high_cycles'length));
                 
             else 
                 -- default 

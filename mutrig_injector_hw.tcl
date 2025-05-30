@@ -1,5 +1,18 @@
+##################################################################################
+# mutrig_injector "MuTRiG Timestamp Precision Injector" v3.0
+# Yifeng Wang 2025.05.05 17:08
+# Inject pulse into MuTRiG for on-board verification
+###################################################################################
 
+################################################
+# History 
+################################################
+# ...
+# 25.0.0505 - use pwr-up default for csr registers
 
+################################################
+# request TCL package from ACDS 16.1
+################################################
 package require qsys 
 
 ################################################ 
@@ -7,7 +20,7 @@ package require qsys
 ################################################ 
 set_module_property DESCRIPTION "Inject pulse into MuTRiG for on-board verification"
 set_module_property NAME mutrig_injector
-set_module_property VERSION 24.0.1111
+set_module_property VERSION 25.0.0505
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property GROUP "Mu3e Data Plane/Modules"
