@@ -4,6 +4,7 @@
 -- Version: 3.0 (Nov 8, 2024) (add system-level verification features; change setting: frequency -> pwm in cycles;
 --                             add avmm *read)
 -- Version: 3.1 (May 5, 2025) (use pwr-up default for csr registers)
+-- Version: 3.2 (Jul 10, 2025) (add onClick injection mode)
 -- =======================================
 -- Date: Aug 10, 2023 (inher. from charge_inj_pulser which is deprecated)
 -- =========
@@ -146,6 +147,10 @@ architecture rtl of mutrig_injector is
     
     signal periodic_injector_pulse      : std_logic;
     
+    -- \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\ onclick_injector \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
+    signal onclick_injector_pulse          : std_logic := '0'; -- pulse output
+    signal onclick_injector_started        : std_logic := '0'; -- pulse started
+    signal onclick_injector_timer          : unsigned(31 downto 0) := (others => '0'); -- timer for pulse duration
     
 begin
 
@@ -156,14 +161,6 @@ begin
         if (rising_edge(i_clk)) then 
             if (i_rst = '1') then 
                 csr                 <= CSR_DEF;
---                csr.mode            <= (others => '0');
---                csr.header_delay    <= std_logic_vector(to_unsigned(DEFAULT_HEADER_DELAY,csr.header_delay'length));
---                csr.header_interval <= std_logic_vector(to_unsigned(DEFAULT_HEADER_INTERVAL,csr.header_interval'length));
---                csr.injection_multiplicity  <= std_logic_vector(to_unsigned(DEFAULT_INJECTION_MULTIPLICITY,csr.injection_multiplicity'length));
---                csr.header_ch       <= std_logic_vector(to_unsigned(DEFAULT_HEADER_CH,csr.header_ch'length));
---                csr.pulse_interval  <= std_logic_vector(to_unsigned(DEFAULT_PULSE_INTERVAL,csr.pulse_interval'length));
---                csr.pulse_high_cycles   <= std_logic_vector(to_unsigned(DEFAULT_PULSE_HIGH_CYCLES,csr.pulse_high_cycles'length));
-                
             else 
                 -- default 
                 avs_csr_waitrequest     <= '1';
@@ -175,6 +172,7 @@ begin
                     case to_integer(unsigned(avs_csr_address)) is 
                         when 0 => -- general mode setting 
                             avs_csr_readdata(csr.mode'high downto 0)            <= csr.mode; -- mode from 1 to 5
+                    
                             --                              0=off; 1=header_sync; 2=periodic; 3=periodic_async; 4=onclick; 5=random
                         -- -------------------- mode 0 --------------------
                         --           reg name               description
@@ -201,6 +199,9 @@ begin
                     case to_integer(unsigned(avs_csr_address)) is 
                         when 0 =>
                             csr.mode                <= avs_csr_writedata(csr.mode'high downto 0);
+                            if (to_integer(unsigned(avs_csr_writedata(csr.mode'high downto 0))) = 4) then 
+                                csr.mode                <= std_logic_vector(to_unsigned(0,csr.mode'length)); -- reset to mode-off [0]
+                            end if;
                         when 1 =>
                             csr.header_delay        <= avs_csr_writedata(csr.header_delay'high downto 0);
                         when 2 => 
@@ -339,14 +340,41 @@ begin
         end if;
     
     end process;
-	
+
+    
+
+    proc_onclick_injecter : process (i_clk)
+    begin
+        if rising_edge(i_clk) then 
+            if (i_rst = '1') then 
+                onclick_injector_pulse          <= '0';
+                onclick_injector_started        <= '0';
+                onclick_injector_timer          <= (others => '0');
+            else 
+                if (to_integer(unsigned(avs_csr_writedata(csr.mode'high downto 0))) = 4 and avs_csr_write = '1' and avs_csr_waitrequest = '0') then -- onClick triggered
+                    onclick_injector_pulse          <= '1';
+                    onclick_injector_started        <= '1';
+                end if;
+
+                if (onclick_injector_started = '1') then 
+                    onclick_injector_timer       <= onclick_injector_timer + 1;
+                    if (onclick_injector_timer = unsigned(csr.pulse_high_cycles)) then 
+                        onclick_injector_pulse      <= '0';
+                        onclick_injector_started    <= '0';
+                        onclick_injector_timer      <= (others => '0');
+                    end if;
+                end if;
+            end if;
+        end if;
+
+        end process;
     
     
 	proc_pulse_arb : process (all)
     begin
         case to_integer(unsigned(csr.mode)) is 
             when 0 =>
-                coe_inject_pulse        <= '0';
+                coe_inject_pulse        <= onclick_injector_pulse; -- off or onClick injection
             when 1 =>
                 coe_inject_pulse        <= header_injector_pulse;
             when 2 =>
