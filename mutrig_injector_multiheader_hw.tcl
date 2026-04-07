@@ -228,5 +228,4 @@ proc validate {} {
     if {[get_parameter_value HEADERINFO_CHANNEL_W] < 1} {
         send_message error "HEADERINFO_CHANNEL_W must be at least 1."
     }
-    elaborate
 }
