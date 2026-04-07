@@ -32,6 +32,8 @@ set_module_property EDITABLE true
 set_module_property REPORT_TO_TALKBACK false
 set_module_property ALLOW_GREYBOX_GENERATION false
 set_module_property REPORT_HIERARCHY false
+set_module_property ELABORATION_CALLBACK elaborate
+set_module_property VALIDATION_CALLBACK validate
 
 ################################################
 # file sets
@@ -214,3 +216,17 @@ set_interface_property reset_interface associatedClock clock_interface
 set_interface_property reset_interface synchronousEdges DEASSERT
 
 add_interface_port reset_interface i_rst reset Input 1
+
+proc elaborate {} {
+    set max_channel [expr {(1 << [get_parameter_value HEADERINFO_CHANNEL_W]) - 1}]
+    for {set idx 0} {$idx <= 7} {incr idx} {
+        set_interface_property headerinfo$idx maxChannel $max_channel
+    }
+}
+
+proc validate {} {
+    if {[get_parameter_value HEADERINFO_CHANNEL_W] < 1} {
+        send_message error "HEADERINFO_CHANNEL_W must be at least 1."
+    }
+    elaborate
+}
