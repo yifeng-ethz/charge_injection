@@ -60,6 +60,31 @@ set_parameter_property HEADERINFO_CHANNEL_W LONG_DESCRIPTION $dscpt
 set_parameter_property HEADERINFO_CHANNEL_W DESCRIPTION $dscpt
 
 ################################################
+# connection point clock_interface
+################################################
+add_interface clock_interface clock end
+set_interface_property clock_interface clockRate 0
+
+add_interface_port clock_interface i_clk clk Input 1
+
+################################################
+# connection point osc_clock_interface
+################################################
+add_interface osc_clock_interface clock end
+set_interface_property osc_clock_interface clockRate 0
+
+add_interface_port osc_clock_interface i_osc_clk clk Input 1
+
+################################################
+# connection point reset_interface
+################################################
+add_interface reset_interface reset end
+set_interface_property reset_interface associatedClock clock_interface
+set_interface_property reset_interface synchronousEdges BOTH
+
+add_interface_port reset_interface i_rst reset Input 1
+
+################################################
 # connection point csr
 ################################################
 add_interface csr avalon end
@@ -191,31 +216,6 @@ set_interface_property inject associatedClock clock_interface
 set_interface_property inject associatedReset reset_interface
 
 add_interface_port inject coe_inject_pulse pulse Output 1
-
-################################################
-# connection point clock_interface
-################################################
-add_interface clock_interface clock end
-set_interface_property clock_interface ENABLED true
-
-add_interface_port clock_interface i_clk clk Input 1
-
-################################################
-# connection point osc_clock_interface
-################################################
-add_interface osc_clock_interface clock end
-set_interface_property osc_clock_interface ENABLED true
-
-add_interface_port osc_clock_interface i_osc_clk clk Input 1
-
-################################################
-# connection point reset_interface
-################################################
-add_interface reset_interface reset end
-set_interface_property reset_interface associatedClock clock_interface
-set_interface_property reset_interface synchronousEdges DEASSERT
-
-add_interface_port reset_interface i_rst reset Input 1
 
 proc elaborate {} {
     set max_channel [expr {(1 << [get_parameter_value HEADERINFO_CHANNEL_W]) - 1}]
