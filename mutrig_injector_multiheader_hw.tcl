@@ -92,6 +92,9 @@ set_interface_property csr addressUnits WORDS
 set_interface_property csr associatedClock clock_interface
 set_interface_property csr associatedReset reset_interface
 set_interface_property csr bitsPerSymbol 8
+set_interface_property csr readLatency 1
+set_interface_property csr readWaitTime 1
+set_interface_property csr timingUnits Cycles
 
 add_interface_port csr avs_csr_writedata writedata Input 32
 add_interface_port csr avs_csr_write write Input 1
