@@ -38,6 +38,8 @@ generic(
 port (
 	-- CSR AVMM
 	avs_csr_writedata		: in  std_logic_vector(31 downto 0);
+	avs_csr_readdata		: out std_logic_vector(31 downto 0);
+	avs_csr_read			: in  std_logic;
 	avs_csr_write			: in  std_logic;
 	avs_csr_waitrequest		: out std_logic;
 	
@@ -94,13 +96,22 @@ begin
 	-- routine for for avmm interface to write to CSR 
 	begin
 		if (i_rst = '1') then
-			avs_csr_waitrequest		<= '0';
+			-- Keep the slave stalled while reset is asserted so Merlin does not
+			-- observe a spurious zero-wait transaction at time 0.
+			avs_csr_waitrequest		<= '1';
+			avs_csr_readdata		<= (others => '0');
 			csr.enable				<= '0';
 			csr.pul_width			<= (others => '0');
 			csr.pul_freq			<= (others => '0');
 		elsif rising_edge(i_clk) then
 			avs_csr_waitrequest		<= '1';
-			if (avs_csr_write = '1') then
+			avs_csr_readdata		<= (others => '0');
+			if (avs_csr_read = '1') then
+				avs_csr_waitrequest		<= '0';
+				avs_csr_readdata(0)		<= csr.enable;
+				avs_csr_readdata(31 downto 24) <= csr.pul_width;
+				avs_csr_readdata(23 downto 8)  <= csr.pul_freq;
+			elsif (avs_csr_write = '1') then
 				avs_csr_waitrequest		<= '0';
 				csr.enable				<= avs_csr_writedata(0);
 				csr.pul_width			<= avs_csr_writedata(31 downto 24);
@@ -118,8 +129,12 @@ begin
 			counter_tick		<= (others => '0'); -- 32bit (frequency counter)
 			pulse_wave			<= '0';
 			pulse_wave_d1		<= '0'; 
+			pulse_trigd			<= '0';
 			counter_pulse_high	<= (others => '0'); -- 8 bit (width counter)
 			o_pulse				<= '0';
+			set_w				<= (others => '0');
+			set_f				<= (others => '0');
+			set_tick_cnt		<= (others => '0');
 			lpm_latency_cnt		<= (others => '0');
 			lpm_calc_done		<= '0';
 			lpm_latch_done		<= '0';

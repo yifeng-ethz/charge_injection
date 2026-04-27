@@ -125,6 +125,8 @@ set_interface_property csr_avmm CMSIS_SVD_VARIABLES ""
 set_interface_property csr_avmm SVD_ADDRESS_GROUP ""
 
 add_interface_port csr_avmm avs_csr_writedata writedata Input 32
+add_interface_port csr_avmm avs_csr_readdata readdata Output 32
+add_interface_port csr_avmm avs_csr_read read Input 1
 add_interface_port csr_avmm avs_csr_write write Input 1
 add_interface_port csr_avmm avs_csr_waitrequest waitrequest Output 1
 set_interface_assignment csr_avmm embeddedsw.configuration.isFlash 0
@@ -145,7 +147,7 @@ set_interface_property pulse_out_conduit PORT_NAME_MAP ""
 set_interface_property pulse_out_conduit CMSIS_SVD_VARIABLES ""
 set_interface_property pulse_out_conduit SVD_ADDRESS_GROUP ""
 
-add_interface_port pulse_out_conduit o_pulse std_logic Output 1
+add_interface_port pulse_out_conduit o_pulse pulse Output 1
 
 
 # 
@@ -161,4 +163,3 @@ set_interface_property reset_interface CMSIS_SVD_VARIABLES ""
 set_interface_property reset_interface SVD_ADDRESS_GROUP ""
 
 add_interface_port reset_interface i_rst reset Input 1
-
