@@ -4,8 +4,8 @@
   <vendorID>MU3E</vendorID>
   <name>MU3E_MUTRIG_INJECTOR</name>
   <series>MU3E_FPGA_IP</series>
-  <version>26.0.0</version>
-  <description>CMSIS-SVD description of the mutrig_injector CSR window. This initial schema exposes the 16-word relative aperture as read-write WORD registers so the frontend can stage explicit injector words while the IP author later refines field names and side effects.</description>
+  <version>26.0.1.0428</version>
+  <description>CSR description for the active MuTRiG timestamp precision injector. This SVD matches mutrig_injector_multiheader.vhd and the Phase-5 mutrig_injector_0 instance.</description>
   <addressUnitBits>8</addressUnitBits>
   <width>32</width>
   <size>32</size>
@@ -18,251 +18,111 @@
       <description>Relative 16-word control/status aperture for the MuTRiG injector.</description>
       <groupName>MU3E_DATA_PATH</groupName>
       <baseAddress>0x0</baseAddress>
-      <addressBlock>
-        <offset>0x0</offset>
-        <size>0x40</size>
-        <usage>registers</usage>
-      </addressBlock>
+      <addressBlock><offset>0x0</offset><size>0x40</size><usage>registers</usage></addressBlock>
       <registers>
         <register>
-          <name>WORD000</name>
-          <description>MuTRiG injector CSR word 0.</description>
-          <addressOffset>0x0</addressOffset>
+          <name>MODE</name>
+          <description>Injection mode selector. Writing value 4 emits a one-click pulse and stores mode 0. Writing value 5 also reseeds PRBS state.</description>
+          <addressOffset>0x00</addressOffset>
           <access>read-write</access>
+          <resetValue>0x00000000</resetValue>
           <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 0.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
+            <field><name>mode</name><description>0=off/one-click return, 1=header synchronous, 2=periodic main clock, 3=periodic oscillator clock, 4=one-click command, 5=PRBS random.</description><bitOffset>0</bitOffset><bitWidth>4</bitWidth><access>read-write</access></field>
           </fields>
         </register>
         <register>
-          <name>WORD001</name>
-          <description>MuTRiG injector CSR word 1.</description>
-          <addressOffset>0x4</addressOffset>
+          <name>HEADER_DELAY</name>
+          <description>Main-clock delay from selected header match to first header-synchronous pulse.</description>
+          <addressOffset>0x04</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 1.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000064</resetValue>
+          <fields><field><name>cycles</name><description>Header delay in clock_interface cycles.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD002</name>
-          <description>MuTRiG injector CSR word 2.</description>
-          <addressOffset>0x8</addressOffset>
+          <name>HEADER_INTERVAL</name>
+          <description>Number of selected header matches between mode-1 bursts.</description>
+          <addressOffset>0x08</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 2.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000001</resetValue>
+          <fields><field><name>matches</name><description>Selected-header match interval.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD003</name>
-          <description>MuTRiG injector CSR word 3.</description>
-          <addressOffset>0xC</addressOffset>
+          <name>INJECTION_MULTIPLICITY</name>
+          <description>Number of pulses in each header-triggered or PRBS-triggered burst.</description>
+          <addressOffset>0x0C</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 3.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000001</resetValue>
+          <fields><field><name>count</name><description>Pulse count per burst.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD004</name>
-          <description>MuTRiG injector CSR word 4.</description>
+          <name>HEADER_CH</name>
+          <description>Selected header channel. The RTL compares this value against all eight headerinfo channel sidebands.</description>
           <addressOffset>0x10</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 4.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000000</resetValue>
+          <fields><field><name>channel</name><description>Selected header channel. Width is set by HEADERINFO_CHANNEL_W in Platform Designer.</description><bitOffset>0</bitOffset><bitWidth>8</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD005</name>
-          <description>MuTRiG injector CSR word 5.</description>
+          <name>PULSE_INTERVAL</name>
+          <description>Mode-2 interval in main-clock cycles. Mode 3 derives the oscillator-domain interval from this value.</description>
           <addressOffset>0x14</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 5.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x000003E8</resetValue>
+          <fields><field><name>cycles</name><description>Pulse period before mode-3 clock-domain scaling.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD006</name>
-          <description>MuTRiG injector CSR word 6.</description>
+          <name>PULSE_HIGH_CYCLES</name>
+          <description>Pulse high duration. RTL uses bits [7:0] and enforces a minimum low gap between burst pulses.</description>
           <addressOffset>0x18</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 6.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000005</resetValue>
+          <fields><field><name>cycles</name><description>Pulse high duration in cycles.</description><bitOffset>0</bitOffset><bitWidth>8</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD007</name>
-          <description>MuTRiG injector CSR word 7.</description>
+          <name>PRBS_RATE</name>
+          <description>Number of main-clock cycles between PRBS state advances in mode 5.</description>
           <addressOffset>0x1C</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 7.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x000003E7</resetValue>
+          <fields><field><name>cycles</name><description>PRBS advance interval.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD008</name>
-          <description>MuTRiG injector CSR word 8.</description>
+          <name>PRBS_PATTERN</name>
+          <description>Pattern compared against the low PRBS bits selected by PRBS_CTRL.</description>
           <addressOffset>0x20</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 8.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x00000001</resetValue>
+          <fields><field><name>pattern</name><description>Pattern bits used for PRBS match.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD009</name>
-          <description>MuTRiG injector CSR word 9.</description>
+          <name>PRBS_SEED</name>
+          <description>Seed used when entering or reseeding mode 5. All-zero selected bits are sanitized to bit 0 set.</description>
           <addressOffset>0x24</addressOffset>
           <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 9.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <resetValue>0x0000ACE1</resetValue>
+          <fields><field><name>seed</name><description>PRBS seed word.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-write</access></field></fields>
         </register>
         <register>
-          <name>WORD010</name>
-          <description>MuTRiG injector CSR word 10.</description>
+          <name>PRBS_CTRL</name>
+          <description>PRBS polynomial and match-width selector.</description>
           <addressOffset>0x28</addressOffset>
           <access>read-write</access>
+          <resetValue>0x00000004</resetValue>
           <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 10.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
+            <field><name>poly_select</name><description>0=PRBS7, 1=PRBS15, 2=PRBS23, 3=PRBS31.</description><bitOffset>0</bitOffset><bitWidth>2</bitWidth><access>read-write</access></field>
+            <field><name>match_width</name><description>Number of low PRBS bits compared against PRBS_PATTERN, clipped to selected polynomial width. Zero is treated as one.</description><bitOffset>2</bitOffset><bitWidth>6</bitWidth><access>read-write</access></field>
           </fields>
         </register>
         <register>
-          <name>WORD011</name>
-          <description>MuTRiG injector CSR word 11.</description>
+          <dim>5</dim>
+          <dimIncrement>0x4</dimIncrement>
+          <dimIndex>11-15</dimIndex>
+          <name>RESERVED%s</name>
+          <description>Reserved decoded word. Current RTL returns zero and ignores writes.</description>
           <addressOffset>0x2C</addressOffset>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 11.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>WORD012</name>
-          <description>MuTRiG injector CSR word 12.</description>
-          <addressOffset>0x30</addressOffset>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 12.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>WORD013</name>
-          <description>MuTRiG injector CSR word 13.</description>
-          <addressOffset>0x34</addressOffset>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 13.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>WORD014</name>
-          <description>MuTRiG injector CSR word 14.</description>
-          <addressOffset>0x38</addressOffset>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 14.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>WORD015</name>
-          <description>MuTRiG injector CSR word 15.</description>
-          <addressOffset>0x3C</addressOffset>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>Raw MuTRiG injector CSR word 15.</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <access>read-write</access>
-            </field>
-          </fields>
+          <access>read-only</access>
+          <resetValue>0x00000000</resetValue>
+          <fields><field><name>value</name><description>Reserved zero readback.</description><bitOffset>0</bitOffset><bitWidth>32</bitWidth><access>read-only</access></field></fields>
         </register>
       </registers>
     </peripheral>
