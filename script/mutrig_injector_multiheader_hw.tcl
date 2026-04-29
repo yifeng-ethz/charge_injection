@@ -17,10 +17,13 @@ package require -exact qsys 16.1
 
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 0
-set VERSION_PATCH_DEFAULT_CONST 2
+set VERSION_PATCH_DEFAULT_CONST 3
 set BUILD_DEFAULT_CONST         429
 set VERSION_DATE_DEFAULT_CONST  20260429
 set VERSION_GIT_DEFAULT_CONST   0x528DBAD5
+set VERSION_GIT_HEX_DEFAULT_CONST [format "0x%08X" $VERSION_GIT_DEFAULT_CONST]
+set IP_UID_DEFAULT_CONST        0x4D494E4A
+set INSTANCE_ID_DEFAULT_CONST   0
 
 set VERSION_STRING_DEFAULT_CONST [format "%d.%d.%d.%04d" \
     $VERSION_MAJOR_DEFAULT_CONST \
@@ -38,7 +41,7 @@ set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property GROUP "Mu3e Data Plane/Modules"
 set_module_property AUTHOR "Yifeng Wang"
-set_module_property ICON_PATH ../firmware_builds/misc/logo/mu3e_logo.png
+set_module_property ICON_PATH ../../firmware_builds/misc/logo/mu3e_logo.png
 set_module_property DISPLAY_NAME "MuTRiG Timestamp Precision Injector (8-header)"
 set_module_property INSTANTIATE_IN_SYSTEM_MODULE true
 set_module_property EDITABLE true
@@ -59,8 +62,8 @@ proc add_html_text {group_name item_name html_text} {
 ################################################
 add_fileset QUARTUS_SYNTH QUARTUS_SYNTH "" ""
 set_fileset_property QUARTUS_SYNTH TOP_LEVEL mutrig_injector_multiheader
-add_fileset_file mutrig_injector_multiheader.vhd VHDL PATH mutrig_injector_multiheader.vhd TOP_LEVEL_FILE
-add_fileset_file mutrig_injector_multiheader.sdc SDC PATH mutrig_injector_multiheader.sdc
+add_fileset_file mutrig_injector_multiheader.vhd VHDL PATH ../rtl/vhdl/mutrig_injector_multiheader.vhd TOP_LEVEL_FILE
+add_fileset_file mutrig_injector_multiheader.sdc SDC PATH ../syn/mutrig_injector_multiheader.sdc
 
 ################################################
 # parameters
@@ -77,6 +80,78 @@ Width of each monitored <headerinfo*> channel field.
 </html>"
 set_parameter_property HEADERINFO_CHANNEL_W LONG_DESCRIPTION $dscpt
 set_parameter_property HEADERINFO_CHANNEL_W DESCRIPTION $dscpt
+
+add_parameter IP_UID NATURAL $IP_UID_DEFAULT_CONST
+set_parameter_property IP_UID DISPLAY_NAME "UID"
+set_parameter_property IP_UID TYPE NATURAL
+set_parameter_property IP_UID UNITS None
+set_parameter_property IP_UID ALLOWED_RANGES 0:2147483647
+set_parameter_property IP_UID HDL_PARAMETER true
+set_parameter_property IP_UID DISPLAY_HINT hexadecimal
+set_parameter_property IP_UID DESCRIPTION {Software-visible IP identifier. Default is ASCII "MINJ".}
+
+add_parameter VERSION_MAJOR NATURAL $VERSION_MAJOR_DEFAULT_CONST
+set_parameter_property VERSION_MAJOR DISPLAY_NAME "Version Major"
+set_parameter_property VERSION_MAJOR TYPE NATURAL
+set_parameter_property VERSION_MAJOR UNITS None
+set_parameter_property VERSION_MAJOR ALLOWED_RANGES 0:255
+set_parameter_property VERSION_MAJOR HDL_PARAMETER true
+set_parameter_property VERSION_MAJOR ENABLED false
+set_parameter_property VERSION_MAJOR DESCRIPTION {Major packaging year exposed through META page 0 VERSION[31:24].}
+
+add_parameter VERSION_MINOR NATURAL $VERSION_MINOR_DEFAULT_CONST
+set_parameter_property VERSION_MINOR DISPLAY_NAME "Version Minor"
+set_parameter_property VERSION_MINOR TYPE NATURAL
+set_parameter_property VERSION_MINOR UNITS None
+set_parameter_property VERSION_MINOR ALLOWED_RANGES 0:255
+set_parameter_property VERSION_MINOR HDL_PARAMETER true
+set_parameter_property VERSION_MINOR ENABLED false
+set_parameter_property VERSION_MINOR DESCRIPTION {Feature revision exposed through META page 0 VERSION[23:16].}
+
+add_parameter VERSION_PATCH NATURAL $VERSION_PATCH_DEFAULT_CONST
+set_parameter_property VERSION_PATCH DISPLAY_NAME "Version Patch"
+set_parameter_property VERSION_PATCH TYPE NATURAL
+set_parameter_property VERSION_PATCH UNITS None
+set_parameter_property VERSION_PATCH ALLOWED_RANGES 0:15
+set_parameter_property VERSION_PATCH HDL_PARAMETER true
+set_parameter_property VERSION_PATCH ENABLED false
+set_parameter_property VERSION_PATCH DESCRIPTION {Compatible-fix revision exposed through META page 0 VERSION[15:12].}
+
+add_parameter BUILD NATURAL $BUILD_DEFAULT_CONST
+set_parameter_property BUILD DISPLAY_NAME "Build"
+set_parameter_property BUILD TYPE NATURAL
+set_parameter_property BUILD UNITS None
+set_parameter_property BUILD ALLOWED_RANGES 0:4095
+set_parameter_property BUILD HDL_PARAMETER true
+set_parameter_property BUILD ENABLED false
+set_parameter_property BUILD DESCRIPTION {MMDD packaging stamp exposed through META page 0 VERSION[11:0].}
+
+add_parameter VERSION_DATE NATURAL $VERSION_DATE_DEFAULT_CONST
+set_parameter_property VERSION_DATE DISPLAY_NAME "Version Date"
+set_parameter_property VERSION_DATE TYPE NATURAL
+set_parameter_property VERSION_DATE UNITS None
+set_parameter_property VERSION_DATE ALLOWED_RANGES 0:2147483647
+set_parameter_property VERSION_DATE HDL_PARAMETER true
+set_parameter_property VERSION_DATE ENABLED false
+set_parameter_property VERSION_DATE DESCRIPTION {YYYYMMDD packaging date exposed through META page 1.}
+
+add_parameter VERSION_GIT NATURAL $VERSION_GIT_DEFAULT_CONST
+set_parameter_property VERSION_GIT DISPLAY_NAME "Git Stamp"
+set_parameter_property VERSION_GIT TYPE NATURAL
+set_parameter_property VERSION_GIT UNITS None
+set_parameter_property VERSION_GIT ALLOWED_RANGES 0:2147483647
+set_parameter_property VERSION_GIT HDL_PARAMETER true
+set_parameter_property VERSION_GIT ENABLED false
+set_parameter_property VERSION_GIT DISPLAY_HINT hexadecimal
+set_parameter_property VERSION_GIT DESCRIPTION {Truncated packaging git stamp exposed through META page 2.}
+
+add_parameter INSTANCE_ID NATURAL $INSTANCE_ID_DEFAULT_CONST
+set_parameter_property INSTANCE_ID DISPLAY_NAME "Instance ID"
+set_parameter_property INSTANCE_ID TYPE NATURAL
+set_parameter_property INSTANCE_ID UNITS None
+set_parameter_property INSTANCE_ID ALLOWED_RANGES 0:2147483647
+set_parameter_property INSTANCE_ID HDL_PARAMETER true
+set_parameter_property INSTANCE_ID DESCRIPTION {Integration-time instance identifier exposed through META page 3.}
 
 set TAB_CONFIGURATION "Configuration"
 set TAB_IDENTITY      "Identity"
@@ -103,8 +178,16 @@ add_html_text "Modes" mode_html {<html><table border="1" cellpadding="3" width="
 add_display_item "" $TAB_IDENTITY GROUP tab
 add_display_item $TAB_IDENTITY "Delivered Profile" GROUP
 add_display_item $TAB_IDENTITY "Versioning" GROUP
-add_html_text "Delivered Profile" profile_html [format {<html><b>Catalog revision</b><br/>This package is delivered as <b>%s</b>.<br/><br/><b>Build date</b><br/>%d<br/><br/><b>Git stamp</b><br/>0x%08X</html>} $VERSION_STRING_DEFAULT_CONST $VERSION_DATE_DEFAULT_CONST $VERSION_GIT_DEFAULT_CONST]
-add_html_text "Versioning" versioning_html {<html><b>Version encoding</b><br/>The Platform Designer component version uses YY.MINOR.PATCH.MMDD. This RTL does not expose a software-readable identity header; software must use the system inventory generated from Qsys plus this SVD/package version.</html>}
+add_html_text "Delivered Profile" profile_html [format {<html><b>Catalog revision</b><br/>This package is delivered as <b>%s</b>.<br/><br/><b>Build date</b><br/>%d<br/><br/><b>Git stamp</b><br/>%s<br/><br/><b>Runtime visibility</b><br/>Software can identify this CSR window through <b>UID</b> at word <b>0</b> and the <b>META</b> mux at word <b>1</b>.</html>} $VERSION_STRING_DEFAULT_CONST $VERSION_DATE_DEFAULT_CONST $VERSION_GIT_HEX_DEFAULT_CONST]
+add_html_text "Versioning" versioning_html {<html><b>Common identity header</b><br/>Word <b>0</b> is <b>UID</b>.<br/>Word <b>1</b> is <b>META</b>: write 0=VERSION, 1=DATE, 2=GIT, 3=INSTANCE_ID.<br/><br/><b>VERSION encoding</b><br/>VERSION[31:24] = MAJOR, VERSION[23:16] = MINOR, VERSION[15:12] = PATCH, VERSION[11:0] = BUILD.<br/><br/><b>Editability</b><br/><b>IP_UID</b> and <b>INSTANCE_ID</b> remain integration-editable. Version, build, date, and git provenance fields are locked to the packaged image.</html>}
+add_display_item "Versioning" IP_UID parameter
+add_display_item "Versioning" VERSION_MAJOR parameter
+add_display_item "Versioning" VERSION_MINOR parameter
+add_display_item "Versioning" VERSION_PATCH parameter
+add_display_item "Versioning" BUILD parameter
+add_display_item "Versioning" VERSION_DATE parameter
+add_display_item "Versioning" VERSION_GIT parameter
+add_display_item "Versioning" INSTANCE_ID parameter
 
 add_display_item "" $TAB_INTERFACES GROUP tab
 add_display_item $TAB_INTERFACES "Clock / Reset" GROUP
@@ -117,18 +200,21 @@ add_html_text "Control And Conduit" control_html {<html><b>csr</b><br/>16-word A
 add_display_item "" $TAB_REGMAP GROUP tab
 add_display_item $TAB_REGMAP "CSR Window" GROUP
 add_html_text "CSR Window" csr_html {<html><table border="1" cellpadding="3" width="100%">
-<tr><th>Word</th><th>Name</th><th>Reset</th><th>Description</th></tr>
-<tr><td>0x0</td><td>MODE</td><td>0</td><td>Bits 3:0 select injection mode. Write value 4 emits one pulse and stores 0. Write value 5 also reseeds PRBS state.</td></tr>
-<tr><td>0x1</td><td>HEADER_DELAY</td><td>100</td><td>Main-clock cycles from selected header match to first header-synchronous pulse.</td></tr>
-<tr><td>0x2</td><td>HEADER_INTERVAL</td><td>1</td><td>Number of selected header matches between mode-1 injection bursts.</td></tr>
-<tr><td>0x3</td><td>INJECTION_MULTIPLICITY</td><td>1</td><td>Number of pulses emitted per header or PRBS-triggered burst.</td></tr>
-<tr><td>0x4</td><td>HEADER_CH</td><td>0</td><td>Selected header channel compared against headerinfo0..7 channel sidebands.</td></tr>
-<tr><td>0x5</td><td>PULSE_INTERVAL</td><td>1000</td><td>Mode-2 main-clock period, and source value for mode-3 oscillator-domain scaled interval.</td></tr>
-<tr><td>0x6</td><td>PULSE_HIGH_CYCLES</td><td>5</td><td>Pulse high duration, stored in bits 7:0. RTL enforces a minimum low gap between burst pulses.</td></tr>
-<tr><td>0x7</td><td>PRBS_RATE</td><td>999</td><td>Number of main-clock cycles between PRBS state advances in mode 5.</td></tr>
-<tr><td>0x8</td><td>PRBS_PATTERN</td><td>0x00000001</td><td>Pattern compared against the low PRBS bits selected by PRBS_CTRL.</td></tr>
-<tr><td>0x9</td><td>PRBS_SEED</td><td>0x0000ACE1</td><td>Seed used when entering or reseeding mode 5. All-zero selected bits are sanitized to bit 0 set.</td></tr>
-<tr><td>0xA</td><td>PRBS_CTRL</td><td>0x00000004</td><td>Bits 1:0 select PRBS7/15/23/31. Bits 7:2 select match width, clipped to the selected LFSR width.</td></tr>
+<tr><th>Word</th><th>Byte</th><th>Name</th><th>Access</th><th>Reset</th><th>Description</th></tr>
+<tr><td>0x0</td><td>0x00</td><td>UID</td><td>RO</td><td>0x4D494E4A</td><td>Software-visible IP identifier. Default is ASCII <b>MINJ</b>.</td></tr>
+<tr><td>0x1</td><td>0x04</td><td>META</td><td>RW/RO</td><td>VERSION page</td><td>Read-multiplexed metadata word. Write <b>0</b>=VERSION, <b>1</b>=DATE, <b>2</b>=GIT, <b>3</b>=INSTANCE_ID. VERSION is packed as MAJOR[31:24], MINOR[23:16], PATCH[15:12], BUILD[11:0].</td></tr>
+<tr><td>0x2</td><td>0x08</td><td>MODE</td><td>RW</td><td>0</td><td>Bits 3:0 select injection mode. Write value 4 emits one pulse and stores 0. Write value 5 also reseeds PRBS state.</td></tr>
+<tr><td>0x3</td><td>0x0C</td><td>HEADER_DELAY</td><td>RW</td><td>100</td><td>Main-clock cycles from selected header match to first header-synchronous pulse.</td></tr>
+<tr><td>0x4</td><td>0x10</td><td>HEADER_INTERVAL</td><td>RW</td><td>1</td><td>Number of selected header matches between mode-1 injection bursts.</td></tr>
+<tr><td>0x5</td><td>0x14</td><td>INJECTION_MULTIPLICITY</td><td>RW</td><td>1</td><td>Number of pulses emitted per header or PRBS-triggered burst.</td></tr>
+<tr><td>0x6</td><td>0x18</td><td>HEADER_CH</td><td>RW</td><td>0</td><td>Selected header channel compared against headerinfo0..7 channel sidebands.</td></tr>
+<tr><td>0x7</td><td>0x1C</td><td>PULSE_INTERVAL</td><td>RW</td><td>1000</td><td>Mode-2 main-clock period, and source value for mode-3 oscillator-domain scaled interval.</td></tr>
+<tr><td>0x8</td><td>0x20</td><td>PULSE_HIGH_CYCLES</td><td>RW</td><td>5</td><td>Pulse high duration, stored in bits 7:0. RTL enforces a minimum low gap between burst pulses.</td></tr>
+<tr><td>0x9</td><td>0x24</td><td>PRBS_RATE</td><td>RW</td><td>999</td><td>Number of main-clock cycles between PRBS state advances in mode 5.</td></tr>
+<tr><td>0xA</td><td>0x28</td><td>PRBS_PATTERN</td><td>RW</td><td>0x00000001</td><td>Pattern compared against the low PRBS bits selected by PRBS_CTRL.</td></tr>
+<tr><td>0xB</td><td>0x2C</td><td>PRBS_SEED</td><td>RW</td><td>0x0000ACE1</td><td>Seed used when entering or reseeding mode 5. All-zero selected bits are sanitized to bit 0 set.</td></tr>
+<tr><td>0xC</td><td>0x30</td><td>PRBS_CTRL</td><td>RW</td><td>0x00000004</td><td>Bits 1:0 select PRBS7/15/23/31. Bits 7:2 select match width, clipped to the selected LFSR width.</td></tr>
+<tr><td>0xD..0xF</td><td>0x34..0x3C</td><td>RESERVED</td><td>RO</td><td>0</td><td>Decoded reserved words return zero and ignore writes.</td></tr>
 </table></html>}
 
 ################################################
@@ -303,5 +389,29 @@ proc elaborate {} {
 proc validate {} {
     if {[get_parameter_value HEADERINFO_CHANNEL_W] < 1} {
         send_message error "HEADERINFO_CHANNEL_W must be at least 1."
+    }
+    if {[get_parameter_value IP_UID] < 0 || [get_parameter_value IP_UID] > 2147483647} {
+        send_message error "IP_UID must stay in the signed 31-bit Platform Designer integer range."
+    }
+    if {[get_parameter_value VERSION_MAJOR] < 0 || [get_parameter_value VERSION_MAJOR] > 255} {
+        send_message error "VERSION_MAJOR must stay in range 0..255."
+    }
+    if {[get_parameter_value VERSION_MINOR] < 0 || [get_parameter_value VERSION_MINOR] > 255} {
+        send_message error "VERSION_MINOR must stay in range 0..255."
+    }
+    if {[get_parameter_value VERSION_PATCH] < 0 || [get_parameter_value VERSION_PATCH] > 15} {
+        send_message error "VERSION_PATCH must stay in range 0..15."
+    }
+    if {[get_parameter_value BUILD] < 0 || [get_parameter_value BUILD] > 4095} {
+        send_message error "BUILD must stay in range 0..4095."
+    }
+    if {[get_parameter_value VERSION_DATE] < 0 || [get_parameter_value VERSION_DATE] > 2147483647} {
+        send_message error "VERSION_DATE must stay in the signed 31-bit Platform Designer integer range."
+    }
+    if {[get_parameter_value VERSION_GIT] < 0 || [get_parameter_value VERSION_GIT] > 2147483647} {
+        send_message error "VERSION_GIT must stay in the signed 31-bit Platform Designer integer range."
+    }
+    if {[get_parameter_value INSTANCE_ID] < 0 || [get_parameter_value INSTANCE_ID] > 2147483647} {
+        send_message error "INSTANCE_ID must stay in the signed 31-bit Platform Designer integer range."
     }
 }
