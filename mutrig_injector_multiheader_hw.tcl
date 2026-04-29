@@ -17,9 +17,9 @@ package require -exact qsys 16.1
 
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 0
-set VERSION_PATCH_DEFAULT_CONST 1
-set BUILD_DEFAULT_CONST         428
-set VERSION_DATE_DEFAULT_CONST  20260428
+set VERSION_PATCH_DEFAULT_CONST 2
+set BUILD_DEFAULT_CONST         429
+set VERSION_DATE_DEFAULT_CONST  20260429
 set VERSION_GIT_DEFAULT_CONST   0x528DBAD5
 
 set VERSION_STRING_DEFAULT_CONST [format "%d.%d.%d.%04d" \
@@ -165,7 +165,8 @@ set_interface_property csr associatedClock clock_interface
 set_interface_property csr associatedReset reset_interface
 set_interface_property csr bitsPerSymbol 8
 set_interface_property csr readLatency 1
-set_interface_property csr readWaitTime 1
+set_interface_property csr readWaitTime 0
+set_interface_property csr writeWaitTime 0
 set_interface_property csr timingUnits Cycles
 
 add_interface_port csr avs_csr_writedata writedata Input 32
