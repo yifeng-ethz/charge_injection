@@ -1,10 +1,13 @@
 -- File name: mutrig_injector_multiheader.vhd
 -- Author: Yifeng Wang (yifenwan@phys.ethz.ch)
 -- =======================================
--- Version: 26.0.3
--- Date   : 20260429
--- Change : Add common Mu3e UID/META CSR identity header and shift injector
---          control registers behind the header.
+-- Version: 26.1.0
+-- Date   : 20260511
+-- Change : 26.0.3 (20260429) - Add common Mu3e UID/META CSR identity header
+--          and shift injector control registers behind the header.
+--          26.1.0 (20260511) - Drop runctl ready output to match rc-network
+--          readyless contract; the local registered constant is no longer
+--          driven onto the entity boundary.
 -- =======================================
 -- Description:
 --   MuTRiG injector variant that monitors all 8 header streams directly.
@@ -25,10 +28,10 @@ generic(
     DEBUG                : natural := 1;
     IP_UID               : natural := 16#4D494E4A#;
     VERSION_MAJOR        : natural := 26;
-    VERSION_MINOR        : natural := 0;
-    VERSION_PATCH        : natural := 3;
-    BUILD                : natural := 429;
-    VERSION_DATE         : natural := 20260429;
+    VERSION_MINOR        : natural := 1;
+    VERSION_PATCH        : natural := 0;
+    BUILD                : natural := 511;
+    VERSION_DATE         : natural := 20260511;
     VERSION_GIT          : natural := 16#528DBAD5#;
     INSTANCE_ID          : natural := 0
 );
@@ -42,9 +45,11 @@ port (
     avs_csr_address          : in  std_logic_vector(3 downto 0);
 
     -- AVST <runctl>
+    -- rc-network is readyless (USE_READY=0 broadcast); no ready output on
+    -- this entity boundary. The original registered constant is preserved
+    -- only as an internal flop kept for the staged reset routing pattern.
     asi_runctl_data          : in  std_logic_vector(8 downto 0);
     asi_runctl_valid         : in  std_logic;
-    asi_runctl_ready         : out std_logic;
 
     -- AVST <headerinfo0>
     asi_headerinfo0_data     : in  std_logic_vector(41 downto 0);
@@ -917,15 +922,8 @@ begin
         end case;
     end process;
 
-    run_management_agent : process(i_clk)
-    begin
-        if rising_edge(i_clk) then
-            if i_rst = '1' then
-                asi_runctl_ready <= '0';
-            else
-                asi_runctl_ready <= '1';
-            end if;
-        end if;
-    end process;
+    -- run_management_agent removed in v26.1.0: the original process only
+    -- registered a constant asi_runctl_ready = '1'. The rc-network is now
+    -- readyless and the port is no longer exposed on the entity.
 
 end architecture;

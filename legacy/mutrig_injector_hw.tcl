@@ -10,6 +10,7 @@
 # ...
 # 25.0.0505 - use pwr-up default for csr registers
 # 25.0.0710 - add onClick injection mode
+# 25.1.0511 - drop runctl ready output to match rc-network readyless contract
 
 ################################################
 # request TCL package from ACDS 16.1
@@ -21,7 +22,7 @@ package require qsys
 ################################################ 
 set_module_property DESCRIPTION "Inject pulse into MuTRiG for on-board verification"
 set_module_property NAME mutrig_injector
-set_module_property VERSION 25.0.0710
+set_module_property VERSION 25.1.0511
 set_module_property INTERNAL false
 set_module_property OPAQUE_ADDRESS_MAP true
 set_module_property GROUP "Mu3e Data Plane/Modules"
@@ -92,7 +93,6 @@ set_interface_property runctl dataBitsPerSymbol 9
 
 add_interface_port runctl asi_runctl_data data Input 9
 add_interface_port runctl asi_runctl_valid valid Input 1
-add_interface_port runctl asi_runctl_ready ready Output 1
 
 ################################################
 # connection point headerinfo

@@ -5,6 +5,7 @@
 --                             add avmm *read)
 -- Version: 3.1 (May 5, 2025) (use pwr-up default for csr registers)
 -- Version: 3.2 (Jul 10, 2025) (add onClick injection mode)
+-- Version: 3.3 (May 11, 2026) (drop runctl ready output to match rc-network readyless contract)
 -- =======================================
 -- Date: Aug 10, 2023 (inher. from charge_inj_pulser which is deprecated)
 -- =========
@@ -73,10 +74,13 @@ port (
     
 
     -- AVST <runctl>
+    -- rc-network is readyless (USE_READY=0 broadcast); no ready output on
+    -- this entity boundary. Original asi_runctl_ready was a constant '1'
+    -- register and is preserved only as an internal flop kept for the
+    -- staged reset routing pattern.
     asi_runctl_data         : in  std_logic_vector(8 downto 0);
     asi_runctl_valid        : in  std_logic;
-    asi_runctl_ready        : out std_logic;
-    
+
     -- AVST <headerinfo>
     asi_headerinfo_data     : in  std_logic_vector(41 downto 0);
     asi_headerinfo_valid    : in  std_logic;
@@ -386,19 +390,9 @@ begin
     
     
     
-    proc_run_management_agent : process (i_clk)
-    begin
-        if rising_edge(i_clk) then 
-            if (i_rst = '1') then 
-            
-            else 
-                asi_runctl_ready        <= '1';
-            end if;
-        end if;
-    
-    
-    
-    end process;
+    -- proc_run_management_agent removed in v3.3: the original process only
+    -- drove asi_runctl_ready <= '1' as a registered constant. The rc-network
+    -- is now readyless and the port is no longer exposed on the entity.
 
 
 
