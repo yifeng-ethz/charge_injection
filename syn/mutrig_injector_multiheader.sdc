@@ -60,11 +60,18 @@ proc constrain_mih_mode3_cdc {} {
         *|mutrig_injector_multiheader:*|periodic_async_rst_meta
         *|mutrig_injector_multiheader:*|periodic_async_rst
     }]
+    set run_active_src [mih_get_registers_any {
+        *|mutrig_injector_multiheader:*|runctl_state[*]
+    }]
+    set run_active_meta [mih_get_registers_any {
+        *|mutrig_injector_multiheader:*|run_active_osc_meta
+    }]
 
     mih_apply_false_path_pair $cfg_req_src   $cfg_req_meta
     mih_apply_false_path_pair $mode_src      $mode_meta
     mih_apply_false_path_pair $interval_src  $interval_meta
     mih_apply_false_path_pair $high_src      $high_meta
+    mih_apply_false_path_pair $run_active_src $run_active_meta
 
     if {[get_collection_size $rst_syncs] > 0} {
         set_false_path -to $rst_syncs

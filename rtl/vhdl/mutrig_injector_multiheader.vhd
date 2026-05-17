@@ -1,7 +1,7 @@
 -- File name: mutrig_injector_multiheader.vhd
 -- Author: Yifeng Wang (yifenwan@phys.ethz.ch)
 -- =======================================
--- Version: 26.1.1
+-- Version: 26.1.2
 -- Date   : 20260517
 -- Change : 26.0.3 (20260429) - Add common Mu3e UID/META CSR identity header
 --          and shift injector control registers behind the header.
@@ -10,6 +10,8 @@
 --          driven onto the entity boundary.
 --          26.1.1 (20260517) - Gate generated injection pulses to RUNNING
 --          and make periodic modes emit exactly every PULSE_INTERVAL cycles.
+--          26.1.2 (20260517) - Mark the RUNNING CDC synchronizer used by
+--          mode-3 oscillator injection and constrain only that crossing.
 -- =======================================
 -- Description:
 --   MuTRiG injector variant that monitors all 8 header streams directly.
@@ -31,7 +33,7 @@ generic(
     IP_UID               : natural := 16#4D494E4A#;
     VERSION_MAJOR        : natural := 26;
     VERSION_MINOR        : natural := 1;
-    VERSION_PATCH        : natural := 1;
+    VERSION_PATCH        : natural := 2;
     BUILD                : natural := 517;
     VERSION_DATE         : natural := 20260517;
     VERSION_GIT          : natural := 16#528DBAD5#;
@@ -448,6 +450,8 @@ architecture rtl of mutrig_injector_multiheader is
     attribute altera_attribute of periodic_async_high_cycles_sync : signal is "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS; -name DONT_MERGE_REGISTER ON; -name PRESERVE_REGISTER ON; -name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name GLOBAL_SIGNAL OFF";
     attribute altera_attribute of periodic_async_rst_meta : signal is "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS; -name DONT_MERGE_REGISTER ON; -name PRESERVE_REGISTER ON; -name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name GLOBAL_SIGNAL OFF";
     attribute altera_attribute of periodic_async_rst : signal is "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS; -name DONT_MERGE_REGISTER ON; -name PRESERVE_REGISTER ON; -name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name GLOBAL_SIGNAL OFF";
+    attribute altera_attribute of run_active_osc_meta : signal is "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS; -name DONT_MERGE_REGISTER ON; -name PRESERVE_REGISTER ON; -name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name GLOBAL_SIGNAL OFF";
+    attribute altera_attribute of run_active_osc : signal is "-name SYNCHRONIZER_IDENTIFICATION FORCED_IF_ASYNCHRONOUS; -name DONT_MERGE_REGISTER ON; -name PRESERVE_REGISTER ON; -name AUTO_SHIFT_REGISTER_RECOGNITION OFF; -name GLOBAL_SIGNAL OFF";
 
 begin
 
