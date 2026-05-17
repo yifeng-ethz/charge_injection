@@ -1,13 +1,15 @@
 -- File name: mutrig_injector_multiheader.vhd
 -- Author: Yifeng Wang (yifenwan@phys.ethz.ch)
 -- =======================================
--- Version: 26.1.0
--- Date   : 20260511
+-- Version: 26.1.1
+-- Date   : 20260517
 -- Change : 26.0.3 (20260429) - Add common Mu3e UID/META CSR identity header
 --          and shift injector control registers behind the header.
 --          26.1.0 (20260511) - Drop runctl ready output to match rc-network
 --          readyless contract; the local registered constant is no longer
 --          driven onto the entity boundary.
+--          26.1.1 (20260517) - Gate generated injection pulses to RUNNING
+--          and make periodic modes emit exactly every PULSE_INTERVAL cycles.
 -- =======================================
 -- Description:
 --   MuTRiG injector variant that monitors all 8 header streams directly.
@@ -29,9 +31,9 @@ generic(
     IP_UID               : natural := 16#4D494E4A#;
     VERSION_MAJOR        : natural := 26;
     VERSION_MINOR        : natural := 1;
-    VERSION_PATCH        : natural := 0;
-    BUILD                : natural := 511;
-    VERSION_DATE         : natural := 20260511;
+    VERSION_PATCH        : natural := 1;
+    BUILD                : natural := 517;
+    VERSION_DATE         : natural := 20260517;
     VERSION_GIT          : natural := 16#528DBAD5#;
     INSTANCE_ID          : natural := 0
 );
@@ -116,6 +118,8 @@ architecture rtl of mutrig_injector_multiheader is
     constant DEFAULT_PRBS_CTRL_CONST              : std_logic_vector(31 downto 0) := x"00000004";
     constant CSR_GENERAL_REG_BITS_CONST           : natural := 32;
     constant MIN_PULSE_CYCLES_CONST               : integer := 5;
+    constant RUNCTL_IDLE_CONST                    : std_logic_vector(8 downto 0) := "000000001";
+    constant RUNCTL_RUNNING_BIT_CONST             : natural := 3;
 
     type header_channel_array_t is array (natural range <>) of std_logic_vector(HEADERINFO_CHANNEL_W-1 downto 0);
 
@@ -420,6 +424,10 @@ architecture rtl of mutrig_injector_multiheader is
     signal onclick_injector_timer    : unsigned(31 downto 0) := (others => '0');
     signal onclick_write_pulse       : std_logic := '0';
     signal csr_meta_page_sel         : std_logic_vector(1 downto 0) := (others => '0');
+    signal runctl_state              : std_logic_vector(8 downto 0) := RUNCTL_IDLE_CONST;
+    signal run_active                : std_logic := '0';
+    signal run_active_osc_meta       : std_logic := '0';
+    signal run_active_osc            : std_logic := '0';
 
     signal header_valid              : std_logic_vector(0 to 7);
     signal header_channel            : header_channel_array_t(0 to 7);
@@ -462,6 +470,18 @@ begin
     header_channel(7) <= asi_headerinfo7_channel;
 
     header_match_valid <= any_header_match(header_valid, header_channel, csr.header_ch);
+    run_active <= runctl_state(RUNCTL_RUNNING_BIT_CONST);
+
+    runctl_state_reg : process(i_clk)
+    begin
+        if rising_edge(i_clk) then
+            if i_rst = '1' then
+                runctl_state <= RUNCTL_IDLE_CONST;
+            elsif asi_runctl_valid = '1' then
+                runctl_state <= asi_runctl_data;
+            end if;
+        end if;
+    end process;
 
     csr_reg : process(i_clk)
     begin
@@ -602,6 +622,8 @@ begin
         if rising_edge(i_osc_clk) then
             periodic_async_rst_meta <= i_rst;
             periodic_async_rst      <= periodic_async_rst_meta;
+            run_active_osc_meta     <= run_active;
+            run_active_osc          <= run_active_osc_meta;
         end if;
     end process;
 
@@ -652,9 +674,17 @@ begin
                 header_injector_idle_cnt <= (others => '0');
                 header_injector_pulse    <= '0';
             else
-                case header_injector is
-                    when IDLE =>
-                        if to_integer(unsigned(csr.mode)) = 1 then
+                if run_active = '0' or to_integer(unsigned(csr.mode)) /= 1 then
+                    header_injector          <= RESETTING;
+                    header_injector_hcnt     <= (others => '0');
+                    header_injector_delay    <= (others => '0');
+                    header_injector_icnt     <= (others => '0');
+                    header_injector_pcnt     <= (others => '0');
+                    header_injector_idle_cnt <= (others => '0');
+                    header_injector_pulse    <= '0';
+                else
+                    case header_injector is
+                        when IDLE =>
                             if header_match_valid = '1' then
                                 header_injector_hcnt <= header_injector_hcnt + 1;
                                 if to_integer(header_injector_hcnt) + 1 = to_integer(unsigned(csr.header_interval)) then
@@ -662,49 +692,51 @@ begin
                                     header_injector_hcnt <= (others => '0');
                                 end if;
                             end if;
-                        end if;
-                    when DELAYING =>
-                        header_injector_delay <= header_injector_delay + 1;
-                        if header_injector_delay = unsigned(csr.header_delay) then
-                            header_injector       <= INJECTING;
-                            header_injector_delay <= (others => '0');
-                        end if;
-                    when INJECTING =>
-                        header_injector_icnt <= header_injector_icnt + 1;
-                        if header_injector_icnt = to_unsigned(0, header_injector_icnt'length) then
-                            header_injector_pulse <= '1';
-                        elsif header_injector_icnt = unsigned(csr.pulse_high_cycles) then
-                            header_injector_pulse <= '0';
-                            header_injector_pcnt  <= header_injector_pcnt + 1;
-                            if to_integer(header_injector_pcnt) + 1 = to_integer(unsigned(csr.injection_multiplicity)) then
-                                header_injector      <= RESETTING;
-                                header_injector_pcnt <= (others => '0');
-                                header_injector_icnt <= (others => '0');
-                            else
-                                header_injector      <= WAITING_LOW;
-                                header_injector_icnt <= (others => '0');
+                        when DELAYING =>
+                            header_injector_delay <= header_injector_delay + 1;
+                            if header_injector_delay = unsigned(csr.header_delay) then
+                                header_injector       <= INJECTING;
+                                header_injector_delay <= (others => '0');
                             end if;
-                        end if;
-                    when WAITING_LOW =>
-                        header_injector_idle_cnt <= header_injector_idle_cnt + 1;
-                        if header_injector_idle_cnt = to_unsigned(MIN_PULSE_CYCLES_CONST, header_injector_idle_cnt'length) then
-                            header_injector          <= INJECTING;
+                        when INJECTING =>
+                            header_injector_icnt <= header_injector_icnt + 1;
+                            if header_injector_icnt = to_unsigned(0, header_injector_icnt'length) then
+                                header_injector_pulse <= '1';
+                            elsif header_injector_icnt = unsigned(csr.pulse_high_cycles) then
+                                header_injector_pulse <= '0';
+                                header_injector_pcnt  <= header_injector_pcnt + 1;
+                                if to_integer(header_injector_pcnt) + 1 = to_integer(unsigned(csr.injection_multiplicity)) then
+                                    header_injector      <= RESETTING;
+                                    header_injector_pcnt <= (others => '0');
+                                    header_injector_icnt <= (others => '0');
+                                else
+                                    header_injector      <= WAITING_LOW;
+                                    header_injector_icnt <= (others => '0');
+                                end if;
+                            end if;
+                        when WAITING_LOW =>
+                            header_injector_idle_cnt <= header_injector_idle_cnt + 1;
+                            if header_injector_idle_cnt = to_unsigned(MIN_PULSE_CYCLES_CONST, header_injector_idle_cnt'length) then
+                                header_injector          <= INJECTING;
+                                header_injector_idle_cnt <= (others => '0');
+                            end if;
+                        when RESETTING =>
+                            header_injector          <= IDLE;
+                            header_injector_hcnt     <= (others => '0');
+                            header_injector_delay    <= (others => '0');
+                            header_injector_icnt     <= (others => '0');
+                            header_injector_pcnt     <= (others => '0');
                             header_injector_idle_cnt <= (others => '0');
-                        end if;
-                    when RESETTING =>
-                        header_injector          <= IDLE;
-                        header_injector_hcnt     <= (others => '0');
-                        header_injector_delay    <= (others => '0');
-                        header_injector_icnt     <= (others => '0');
-                        header_injector_pcnt     <= (others => '0');
-                        header_injector_idle_cnt <= (others => '0');
-                        header_injector_pulse    <= '0';
-                end case;
+                            header_injector_pulse    <= '0';
+                    end case;
+                end if;
             end if;
         end if;
     end process;
 
     periodic_injector_reg : process(i_clk)
+        variable interval_v : unsigned(31 downto 0);
+        variable high_v     : unsigned(31 downto 0);
     begin
         if rising_edge(i_clk) then
             if i_rst = '1' then
@@ -713,39 +745,41 @@ begin
                 periodic_injector_j_cnt <= (others => '0');
                 periodic_injector_pulse <= '0';
             else
-                case periodic_injector is
-                    when INJECTING =>
-                        periodic_injector_i_cnt <= periodic_injector_i_cnt + 1;
-                        periodic_injector_j_cnt <= periodic_injector_j_cnt + 1;
-                        periodic_injector_pulse <= '1';
-                        if periodic_injector_j_cnt = unsigned(csr.pulse_high_cycles) then
-                            periodic_injector_pulse <= '0';
-                            periodic_injector_j_cnt <= (others => '0');
-                            periodic_injector       <= WAITING_LOW;
-                        end if;
-                    when WAITING_LOW =>
-                        periodic_injector_i_cnt <= periodic_injector_i_cnt + 1;
-                        if periodic_injector_i_cnt > to_unsigned(MIN_PULSE_CYCLES_CONST, periodic_injector_i_cnt'length) then
-                            if periodic_injector_i_cnt >= unsigned(csr.pulse_interval) then
-                                periodic_injector <= IDLING;
-                            end if;
-                        end if;
-                    when IDLING =>
-                        if to_integer(unsigned(csr.mode)) = 2 then
-                            periodic_injector <= INJECTING;
-                        end if;
-                        periodic_injector_i_cnt <= (others => '0');
-                    when RESETTING =>
-                        periodic_injector       <= IDLING;
-                        periodic_injector_i_cnt <= (others => '0');
-                        periodic_injector_j_cnt <= (others => '0');
+                if run_active = '0' or to_integer(unsigned(csr.mode)) /= 2 or unsigned(csr.pulse_interval) = to_unsigned(0, csr.pulse_interval'length) then
+                    periodic_injector       <= IDLING;
+                    periodic_injector_i_cnt <= (others => '0');
+                    periodic_injector_j_cnt <= (others => '0');
+                    periodic_injector_pulse <= '0';
+                else
+                    interval_v := unsigned(csr.pulse_interval);
+                    high_v     := resize(unsigned(csr.pulse_high_cycles), interval_v'length);
+
+                    periodic_injector       <= INJECTING;
+                    periodic_injector_j_cnt <= resize(unsigned(csr.pulse_high_cycles), periodic_injector_j_cnt'length);
+
+                    if high_v = to_unsigned(0, high_v'length) then
                         periodic_injector_pulse <= '0';
-                end case;
+                    elsif high_v >= interval_v then
+                        periodic_injector_pulse <= '1';
+                    elsif periodic_injector_i_cnt >= (interval_v - high_v) then
+                        periodic_injector_pulse <= '1';
+                    else
+                        periodic_injector_pulse <= '0';
+                    end if;
+
+                    if periodic_injector_i_cnt + 1 >= interval_v then
+                        periodic_injector_i_cnt <= (others => '0');
+                    else
+                        periodic_injector_i_cnt <= periodic_injector_i_cnt + 1;
+                    end if;
+                end if;
             end if;
         end if;
     end process;
 
     periodic_async_injector_reg : process(i_osc_clk)
+        variable interval_v : unsigned(31 downto 0);
+        variable high_v     : unsigned(31 downto 0);
     begin
         if rising_edge(i_osc_clk) then
             if periodic_async_rst = '1' then
@@ -754,34 +788,34 @@ begin
                 periodic_async_j_cnt    <= (others => '0');
                 periodic_async_pulse    <= '0';
             else
-                case periodic_async_injector is
-                    when INJECTING =>
-                        periodic_async_i_cnt <= periodic_async_i_cnt + 1;
-                        periodic_async_j_cnt <= periodic_async_j_cnt + 1;
+                if run_active_osc = '0' or to_integer(unsigned(periodic_async_mode)) /= 3 or periodic_async_interval = to_unsigned(0, periodic_async_interval'length) then
+                    periodic_async_injector <= IDLING;
+                    periodic_async_i_cnt    <= (others => '0');
+                    periodic_async_j_cnt    <= (others => '0');
+                    periodic_async_pulse    <= '0';
+                else
+                    interval_v := periodic_async_interval;
+                    high_v     := resize(periodic_async_high_cycles, interval_v'length);
+
+                    periodic_async_injector <= INJECTING;
+                    periodic_async_j_cnt <= resize(periodic_async_high_cycles, periodic_async_j_cnt'length);
+
+                    if high_v = to_unsigned(0, high_v'length) then
+                        periodic_async_pulse <= '0';
+                    elsif high_v >= interval_v then
                         periodic_async_pulse <= '1';
-                        if periodic_async_j_cnt = periodic_async_high_cycles then
-                            periodic_async_pulse <= '0';
-                            periodic_async_j_cnt <= (others => '0');
-                            periodic_async_injector <= WAITING_LOW;
-                        end if;
-                    when WAITING_LOW =>
-                        periodic_async_i_cnt <= periodic_async_i_cnt + 1;
-                        if periodic_async_i_cnt > to_unsigned(ASYNC_MIN_PULSE_CYCLES_CONST, periodic_async_i_cnt'length) then
-                            if periodic_async_i_cnt >= periodic_async_interval then
-                                periodic_async_injector <= IDLING;
-                            end if;
-                        end if;
-                    when IDLING =>
-                        if to_integer(unsigned(periodic_async_mode)) = 3 then
-                            periodic_async_injector <= INJECTING;
-                        end if;
+                    elsif periodic_async_i_cnt >= (interval_v - high_v) then
+                        periodic_async_pulse <= '1';
+                    else
+                        periodic_async_pulse <= '0';
+                    end if;
+
+                    if periodic_async_i_cnt + 1 >= interval_v then
                         periodic_async_i_cnt <= (others => '0');
-                    when RESETTING =>
-                        periodic_async_injector <= IDLING;
-                        periodic_async_i_cnt    <= (others => '0');
-                        periodic_async_j_cnt    <= (others => '0');
-                        periodic_async_pulse    <= '0';
-                end case;
+                    else
+                        periodic_async_i_cnt <= periodic_async_i_cnt + 1;
+                    end if;
+                end if;
             end if;
         end if;
     end process;
@@ -810,7 +844,7 @@ begin
                     random_injector_lfsr     <= sanitize_prbs_state(csr.prbs_seed, csr.prbs_ctrl);
                     random_injector_req_pending <= '0';
                     random_injector_pulse    <= '0';
-                elsif to_integer(unsigned(csr.mode)) /= 5 then
+                elsif run_active = '0' or to_integer(unsigned(csr.mode)) /= 5 then
                     random_injector          <= RESETTING;
                     random_injector_rate_cnt <= (others => '0');
                     random_injector_icnt     <= (others => '0');

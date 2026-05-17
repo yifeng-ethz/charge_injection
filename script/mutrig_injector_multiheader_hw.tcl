@@ -10,6 +10,7 @@
 # ...
 # 26.0.0326 - fold v2 multi-header injector into source IP tree
 # 26.1.0511 - drop runctl ready output to match rc-network readyless contract
+# 26.1.0517 - gate generated pulses to RUNNING and emit exact periodic intervals
 
 ################################################
 # request TCL package from ACDS 16.1
@@ -18,10 +19,10 @@ package require -exact qsys 16.1
 
 set VERSION_MAJOR_DEFAULT_CONST 26
 set VERSION_MINOR_DEFAULT_CONST 1
-set VERSION_PATCH_DEFAULT_CONST 0
-set BUILD_DEFAULT_CONST         511
-set VERSION_DATE_DEFAULT_CONST  20260511
-set VERSION_GIT_DEFAULT_CONST   0x528DBAD5
+set VERSION_PATCH_DEFAULT_CONST 1
+set BUILD_DEFAULT_CONST         517
+set VERSION_DATE_DEFAULT_CONST  20260517
+set VERSION_GIT_DEFAULT_CONST   0x00000000
 set VERSION_GIT_HEX_DEFAULT_CONST [format "0x%08X" $VERSION_GIT_DEFAULT_CONST]
 set IP_UID_DEFAULT_CONST        0x4D494E4A
 set INSTANCE_ID_DEFAULT_CONST   0
